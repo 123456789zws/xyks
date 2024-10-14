@@ -3,19 +3,44 @@
 vue逆向笔记 [frida/readme.md](frida/readme.md)  
 sign逆向笔记 [frida/sign_decrypt.md](frida/sign_decrypt.md)
 
-# 请查看我们的最新进展
+# [请查看我们的最新进展](frida/auto_answer/readme.md)
 [待完成的自动发包笔记](frida/auto_answer/readme.md)  
-我们目前什么也没做, 希望各位大佬能一起研究
 
-# 目录说明
-|||
+# 关键目录说明
+
+|目录|功能|
 |--|--|
 |dexdump|使用frida-dexdump导出的dex|
 |frida|用到的一些脚本和逆向笔记|
 |har|在虚拟机抓到的包|
-|java_test|一点java测试|
+|java_test|一点java测试| 
+|[matchV2](frida/matchV2)|修改获取到的试题包,可修改成一道题任意答案|
+|[matchV2_byDataDecryptCommand](frida/matchV2_byDataDecryptCommand)|和`matchV2`同样的功能, 修改获取到的试题包,可修改成一道题任意答案|
+|[submit](frida/submit)|修改提交的答案包,可修改答题耗时|
+|[gan_sign](frida/gan_sign)|生成sign参数, 在未来纯协议发包时有用, 目前没用|  
+
 
 # 如何复现
+## adb相关
+现在frida使用`adb shell ps | grep com.fenbi.android.leo`查询小猿口算pid, 所以需要安装adb
+- 提前下载platform模块并放入系统环境变量。  
+- 运行PowerShell或者CMD  
+- 输入`adb devices`查找设备绑定  
+- 输入`adb connnect 127.0.0.1:port` 注意 此处的port为端口号 具体查看模拟器的ADB端口  
+  Mumu模拟器一般默认为16384 或者直接输入`adb connect 127.0.0.1:16384` 
+- 下载frida-server-android使用adb推送至安卓  
+    ```sh
+    adb push frida-server-android*路径 /data/local/tmp
+    adb shell
+    su #此处需要在模拟器中授权
+    cd /data/local/tmp
+    chmod 777 frida-server-android* #给rwx权限
+    ./frida-server-android*
+    ```
+    即可运行frida，到此adb结束。  
+
+    注意不要退出powershell或者cmd的窗口
+    ![image](https://github.com/user-attachments/assets/4d0570db-4b13-4f50-b48a-bdb30eee24a4)
 
 ## webview复现
 + windows:  
@@ -63,70 +88,14 @@ sign逆向笔记 [frida/sign_decrypt.md](frida/sign_decrypt.md)
 ![image](/image/change_json.png)
 
 
-## [未经测试的加载RequestEncoder生成sign方法](frida/gan_sign)
+## 已经测试有效的[加载RequestEncoder生成sign方法](frida/gan_sign)
 根据 [taotao5](https://github.com/taotao5) 在 [#9](https://github.com/xmexg/xyks/issues/9) 提供的hook方向, 现写出:  
 + [anay_loadRequestEncoder.js](frida/anay_loadRequestEncoder.js) hook分析测试脚本
 + [gan_sign_model.js](frida/gan_sign/gan_sign_model.js) 生成sign
 + [gan_sign_model.py](frida/gan_sign/gan_sign_model.py) 提供python调用
 
 
-## [正在测试通过frida调用的形式不解具体算法拿到带sign的url](./frida/sign_decrypt.md)  
-获取pk试题及答案，提交答案主要在`exercise.ts`文件里  
-生成请求参数位于`request.ts`文件里  
-跟踪`signUrlIfNeeded`方法，一路跟踪发现使用`solar`让安卓程序生成sign再把url带参数传回来  
 
-+ 使用`anay_webview.js`能看到传递和调用链  
-```sh
-cd frida
-frida -U -n 小猿口算 -l anay_webview.js
-```
-```js
-WebView loading URL: javascript:(window.requestConfig_callback_1728561502343_17 && window.requestConfig_callback_1728561502343_17("W251bGxd
-"))
-解码 Base64: [null]
-调用链: java.lang.Exception
-        at android.webkit.WebView.loadUrl(Native Method)
-        at com.tencent.smtt.sdk.WebView.loadUrl(SourceFile:1)
-        at java.lang.reflect.Method.invoke(Native Method)
-        at org.lsposed.lspd.nativebridge.HookBridge.invokeOriginalMethod(Native Method)
-        at J.callback(Unknown Source:193)
-        at LSPHooker_.loadUrl(Unknown Source:11)
-        at com.fenbi.android.leo.webapp.JsBridgeBean.callback$leo_webview_release(SourceFile:73)
-        at com.fenbi.android.leo.webapp.secure.LeoSecureWebViewApi$g.run(SourceFile:11)
-        at android.os.Handler.handleCallback(Handler.java:938)
-        at android.os.Handler.dispatchMessage(Handler.java:99)
-        at android.os.Looper.loopOnce(Looper.java:201)
-        at android.os.Looper.loop(Looper.java:288)
-        at android.app.ActivityThread.main(ActivityThread.java:8060)
-        at java.lang.reflect.Method.invoke(Native Method)
-        at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:571)
-        at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1091)
-
-WebView loading URL: javascript:(window.requestConfig_1728561502343_16 && window.requestConfig_1728561502343_16("W251bGwseyJ1c2VyQWdlbnQiOiJMZW8vMy45My4yIChYaWFvbWkyMjA2MTIyU0M7IEFuZHJvaWQgMTI7IFNjYWxlLzEuNDkpIiwid3JhcHBlZFVybCI6Ii9sZW8tZ2FtZS1way9hbmRyb2lkL21hdGgvcGsvaG9tZT9fcHJvZHVjdElkXHUwMDNkNjExXHUwMDI2cGxhdGZvcm1cdTAwM2RhbmRyb2lkMzJcdTAwMjZ2ZXJzaW9uXHUwMDNkMy45My4yXHUwMDI2dmVuZG9yXHUwMDNkeGlhb19taVx1MDAyNmF2XHUwMDNkNVx1MDAyNnNpZ25cdTAwM2RmMmQ2NjhjZTY3MDgxOWMwNWI3NjRhMjM3YzcyNjQ0Mlx1MDAyNmRldmljZUNhdGVnb3J5XHUwMDNkcGFkIn1d"))
-解码 Base64: [null,{"userAgent":"Leo/3.93.2 (Xiaomi2206122SC; Android 12; Scale/1.49)","wrappedUrl":"/leo-game-pk/android/math/pk/home?_productId=611&platform\u003dandroid32&version\u003d3.93.2&vendor\u003dxiao_mi&av\u003d5&sign\u003df2d668ce670819c05b764a237c726442&deviceCategory\u003dpad"}]
-调用链: java.lang.Exception
-        at android.webkit.WebView.loadUrl(Native Method)
-        at com.tencent.smtt.sdk.WebView.loadUrl(SourceFile:1)
-        at java.lang.reflect.Method.invoke(Native Method)
-        at org.lsposed.lspd.nativebridge.HookBridge.invokeOriginalMethod(Native Method)
-        at J.callback(Unknown Source:193)
-        at LSPHooker_.loadUrl(Unknown Source:11)
-        at com.yuanfudao.android.common.webview.base.JsBridgeBean$a.run(SourceFile:47)
-        at android.os.Handler.handleCallback(Handler.java:938)
-        at android.os.Handler.dispatchMessage(Handler.java:99)
-        at android.os.Looper.loopOnce(Looper.java:201)
-        at android.os.Looper.loop(Looper.java:288)
-        at android.app.ActivityThread.main(ActivityThread.java:8060)
-        at java.lang.reflect.Method.invoke(Native Method)
-        at com.android.internal.os.RuntimeInit$MethodAndArgsCaller.run(RuntimeInit.java:571)
-        at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:1091)
-```
-
-+ 使用[frida-dexdump](https://github.com/hluwa/frida-dexdump)  
-```
-frida-dexdump -FU
-```
-frida-dexdump导出的[dex](frida/dexdump/小猿口算),拖到jadx窗口逆向
 
 ## 现状
 已完成:   
@@ -141,6 +110,11 @@ frida-dexdump导出的[dex](frida/dexdump/小猿口算),拖到jadx窗口逆向
 
 推荐项目：
 + 修改数据包欺骗服务器做题耗时: https://github.com/Hawcett/XiaoYuanKouSuan_Frida_hook
++ 小猿搜题冲榜/刷排名/专用思路一s2w分: https://github.com/xiaou61/XiaoYuanKousuan
++ 控制跳转,瞬间提交: https://github.com/FoskyM/XiaoYuanKouSuan_Tutorial
+
+推荐链接
++ 全国每日榜: https://xyks.yuanfudao.com/bh5/leo-web-config-activity/activity.html?orionKey=leo.activity.config.picture.v5&_productId=611#/
 
 ## 免责声明
 
